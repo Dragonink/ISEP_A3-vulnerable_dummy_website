@@ -1,0 +1,7 @@
+db.sqlite
+
+# Rust
+/target/
+
+# Visual Studio Code
+.vscode/
