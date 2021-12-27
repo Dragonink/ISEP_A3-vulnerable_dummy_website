@@ -3,6 +3,8 @@
 
 #[macro_use]
 extern crate rocket;
+#[macro_use]
+extern crate async_recursion;
 use rocket::{
 	http::Status,
 	request::{FromRequest, Outcome},
@@ -12,7 +14,13 @@ use rocket_sync_db_pools::{database, rusqlite::Connection};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-mod web;
+mod www {
+	mod api;
+	mod r#static;
+
+	pub(crate) use api::routes as api_routes;
+	pub(crate) use r#static::routes as static_routes;
+}
 
 #[database("sqlite")]
 struct DbConnection(Connection);
@@ -28,7 +36,7 @@ struct Session {
 	pub username: String,
 }
 impl Session {
-	pub const COOKIE: &'static str = "session";
+	pub const COOKIE: &'static str = "__Host-session";
 }
 #[async_trait]
 impl<'r> FromRequest<'r> for Session {
@@ -63,14 +71,15 @@ type Sessions = HashMap<String, String>;
 #[launch]
 fn rocket() -> _ {
 	use rocket::{shield::Shield, tokio::sync::Mutex};
-	use std::collections::HashMap;
+	use rocket_dyn_templates::Template;
 
-	let sessions: Sessions = HashMap::new();
+	let sessions = Sessions::new();
 
 	rocket::build()
 		.attach(Shield::new())
 		.attach(DbConnection::fairing())
+		.attach(Template::fairing())
 		.manage(Mutex::new(sessions))
-		.mount("/", web::static_routes())
-		.mount("/api", web::api_routes())
+		.mount("/", www::static_routes())
+		.mount("/api", www::api_routes())
 }

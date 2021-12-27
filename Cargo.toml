@@ -1,13 +1,15 @@
 [package]
 name = "vulnerable_dummy_website"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 publish = false
 
 [dependencies]
+async-recursion = "0"
 either = "1"
 rand = { version = "0", features = ["getrandom"] }
 rocket = { version = "0.5.0-rc.1", features = ["secrets", "json"] }
+rocket_dyn_templates = { version = "0.1.0-rc.1", features = ["handlebars"] }
 rocket_sync_db_pools = { version = "0.1.0-rc.1", features = ["sqlite_pool"] }
 serde = "1"
 serde_json = "1"
