@@ -68,6 +68,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aho-corasick"
+version = "0.7.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e37cfd5e7657ada45f742d6e99ca5788580b5c529dc78faf11ece6dc702656f"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "ansi_term"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -191,15 +200,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "block-buffer"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1d36a02058e76b040de25a4464ba1c80935655595b661505c8b39b664828b95"
-dependencies = [
- "generic-array 0.14.4",
-]
-
-[[package]]
 name = "block-padding"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -276,7 +276,7 @@ dependencies = [
  "hkdf",
  "percent-encoding",
  "rand",
- "sha2 0.9.8",
+ "sha2",
  "subtle",
  "time",
  "version_check",
@@ -296,15 +296,6 @@ name = "cpuid-bool"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcb25d077389e53838a8158c8e99174c5a9d902dee4904320db714f3c653ffba"
-
-[[package]]
-name = "crypto-common"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "683d6b536309245c849479fba3da410962a43ed8e51c26b729208ec0ac2798d0"
-dependencies = [
- "generic-array 0.14.4",
-]
 
 [[package]]
 name = "crypto-mac"
@@ -373,17 +364,6 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3dd60d1080a57a05ab032377049e0591415d2b31afd7028356dbf3cc6dcb066"
 dependencies = [
- "generic-array 0.14.4",
-]
-
-[[package]]
-name = "digest"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b697d66081d42af4fba142d56918a3cb21dc8eb63372c6b85d14f44fb9c5979b"
-dependencies = [
- "block-buffer 0.10.0",
- "crypto-common",
  "generic-array 0.14.4",
 ]
 
@@ -1375,6 +1355,8 @@ version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d07a8629359eb56f1e2fb1652bb04212c072a87ba68546a04065d525673ac461"
 dependencies = [
+ "aho-corasick",
+ "memchr",
  "regex-syntax",
 ]
 
@@ -1666,17 +1648,6 @@ dependencies = [
  "cpufeatures",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
-]
-
-[[package]]
-name = "sha2"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "900d964dd36bb15bcf2f2b35694c072feab74969a54f2bbeec7a2d725d2bdcb6"
-dependencies = [
- "cfg-if 1.0.0",
- "cpufeatures",
- "digest 0.10.1",
 ]
 
 [[package]]
@@ -2076,17 +2047,21 @@ checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
 
 [[package]]
 name = "vulnerable_dummy_website"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "async-recursion",
+ "base64",
  "either",
+ "futures",
  "rand",
+ "regex",
  "rocket",
  "rocket_dyn_templates",
  "rocket_sync_db_pools",
  "serde",
  "serde_json",
- "sha2 0.10.0",
+ "sha2",
+ "tokio",
 ]
 
 [[package]]

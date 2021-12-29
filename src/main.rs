@@ -1,5 +1,4 @@
-#![warn(clippy::all)]
-#![deny(clippy::correctness)]
+#![deny(unused_must_use)]
 
 #[macro_use]
 extern crate rocket;
@@ -19,6 +18,7 @@ mod www {
 	mod r#static;
 
 	pub(crate) use api::routes as api_routes;
+	pub(crate) use api::Article;
 	pub(crate) use r#static::routes as static_routes;
 }
 
@@ -30,13 +30,32 @@ struct User {
 	pub username: String,
 }
 
+struct AdminUser;
+impl AdminUser {
+	pub const USERNAME: &'static str = "admin";
+}
+#[async_trait]
+impl<'r> FromRequest<'r> for AdminUser {
+	type Error = ();
+
+	async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+		req.guard::<Session>().await.and_then(|session| {
+			if session.username == Self::USERNAME {
+				Outcome::Success(Self)
+			} else {
+				Outcome::Failure((Status::Unauthorized, ()))
+			}
+		})
+	}
+}
+
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct Session {
 	pub auth_key: String,
 	pub username: String,
 }
 impl Session {
-	pub const COOKIE: &'static str = "__Host-session";
+	pub const COOKIE: &'static str = "session";
 }
 #[async_trait]
 impl<'r> FromRequest<'r> for Session {
@@ -68,18 +87,24 @@ impl<'r> FromRequest<'r> for Session {
 
 type Sessions = HashMap<String, String>;
 
-#[launch]
-fn rocket() -> _ {
+#[tokio::main]
+async fn main() -> Result<(), rocket::Error> {
 	use rocket::{shield::Shield, tokio::sync::Mutex};
 	use rocket_dyn_templates::Template;
 
 	let sessions = Sessions::new();
+	let articles = www::Article::index_all()
+		.await
+		.map_err(|err| rocket::Error::from(rocket::error::ErrorKind::Io(err)))?;
 
 	rocket::build()
 		.attach(Shield::new())
 		.attach(DbConnection::fairing())
 		.attach(Template::fairing())
 		.manage(Mutex::new(sessions))
+		.manage(Mutex::new(articles))
 		.mount("/", www::static_routes())
 		.mount("/api", www::api_routes())
+		.launch()
+		.await
 }

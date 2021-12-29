@@ -3,6 +3,3 @@ template_dir = "static"
 secret_key = "b56b/5ym3UhkwkmqJ7gA0GyB2KVyWtzQlo/nV8X4Stg="
 [global.databases]
 sqlite = { url = "./db.sqlite" }
-
-[debug]
-log_level = "debug"

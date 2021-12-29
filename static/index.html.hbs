@@ -26,24 +26,16 @@
 		/**@type {HTMLTemplateElement}*/
 		const NEW_ARTICLE = document.querySelector("template#new-article");
 
-		void fetch("/api/articles")
+		void fetch("/api/article")
 			.then(res => res.json())
-			.then((/**@type {string[]}*/ articles) => Promise.all(articles.map(article =>
-				fetch(`/article?file=${article}`)
-					.then(res => res.text())
-					.then(html => {
-						/**@type {HTMLDocument}*/
-						const htmlDoc = new DOMParser().parseFromString(html, "text/html");
-
-						const clone = NEW_ARTICLE.content.cloneNode(true);
-						((/**@type {HTMLAnchorElement}*/a) => {
-							a.textContent = htmlDoc.title;
-							a.href += article;
-						})(clone.querySelector("a"));
-						void ARTICLES.appendChild(clone);
-					})
-					.catch(console.error)
-			)))
+			.then((/**@type { {file: string, title: string, content: string}[] }*/ articles) => Promise.all(articles.map(article => {
+				const clone = NEW_ARTICLE.content.cloneNode(true);
+				((/**@type {HTMLAnchorElement}*/ a) => {
+					a.innerHTML = article.title; //NOTE: XSS vulnerable
+					a.href += article.file;
+				})(clone.querySelector("a"));
+				void ARTICLES.appendChild(clone);
+			})))
 			.catch(console.error);
 	</script>
 </body>
