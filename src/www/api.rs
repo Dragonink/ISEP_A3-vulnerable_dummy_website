@@ -1,5 +1,4 @@
 use crate::{Session, Sessions};
-use either::Either;
 use rocket::{
 	form::Form,
 	http::{Method, Status},
@@ -18,6 +17,7 @@ use std::{
 	path::PathBuf,
 };
 
+#[repr(transparent)]
 struct OptionsResponder<I: IntoIterator<Item = Method>>(I);
 impl<'r, I: IntoIterator<Item = Method>> Responder<'r, 'static> for OptionsResponder<I>
 where
@@ -89,6 +89,7 @@ impl<'r> FromRequest<'r> for AuthorizationGuard {
 
 type Authorization = Result<AuthorizationGuard, Status>;
 
+#[repr(transparent)]
 struct AuthorizationResponder(Authorization);
 impl<'r> Responder<'r, 'static> for AuthorizationResponder {
 	fn respond_to(self, _req: &'r Request<'_>) -> response::Result<'static> {
@@ -193,7 +194,7 @@ impl Hash for Article {
 async fn options_article() -> OptionsResponder<Vec<Method>> {
 	use rocket::http::Method;
 
-	OptionsResponder(vec![Method::Get, Method::Put])
+	OptionsResponder(vec![Method::Get, Method::Post])
 }
 
 #[get("/article")]
@@ -201,32 +202,33 @@ async fn articles(articles: &State<Mutex<HashSet<Article>>>) -> Json<Vec<Article
 	Json(articles.lock().await.iter().cloned().collect())
 }
 
-#[put("/article", data = "<article>")]
+#[post("/article", data = "<article>")]
 async fn new_article(
 	auth: Authorization,
 	articles: &State<Mutex<HashSet<Article>>>,
 	article: Json<Article>,
-) -> Either<Status, AuthorizationResponder> {
+) -> Result<Status, AuthorizationResponder> {
 	if auth.is_err() {
-		Either::Right(AuthorizationResponder(auth))
+		Err(AuthorizationResponder(auth))
 	} else {
 		let article = article.into_inner();
-		Either::Left(if articles.lock().await.insert(article.clone()) {
-			let mut path = PathBuf::from(Article::STORAGE).join(&article.file); //NOTE: Path traversal vulnerable
-			path.set_extension("html.hbs");
-			tokio::fs::write(path, format!(//NOTE: DOM injection vulnerable
-			r#"<!DOCTYPE html><html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>{title}</title></head><body>{{{{> header}}}}<main><article>{content}</article></main></body></html>"#,
+		let mut path = PathBuf::from(Article::STORAGE).join(&article.file); //NOTE: Path traversal vulnerable
+		path.set_extension("html.hbs");
+		let mut articles = articles.lock().await;
+		Ok(tokio::fs::write(path, format!(//NOTE: DOM injection vulnerable
+			r#"<!DOCTYPE html><html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>{title}</title><link rel="stylesheet" href="/index.css" /></head><body>{{{{> header}}}}<main><article><h1>{title}</h1>{content}</article></main></body></html>"#,
 			title = &article.title,
 			content = &article.content,
 		)).await
-			.map(|()| Status::Created)
-			.unwrap_or(Status::InternalServerError)
-		} else {
-			Status::Ok
-		})
+			.map(|()| {
+				articles.insert(article.clone());
+				Status::Created
+			})
+			.unwrap_or(Status::InternalServerError))
 	}
 }
 
+#[repr(transparent)]
 struct LoginResponder(Session);
 impl<'r> Responder<'r, 'static> for LoginResponder {
 	fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {

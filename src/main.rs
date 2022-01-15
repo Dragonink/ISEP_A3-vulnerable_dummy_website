@@ -23,6 +23,7 @@ mod www {
 }
 
 #[database("sqlite")]
+#[repr(transparent)]
 struct DbConnection(Connection);
 
 #[derive(Serialize, Deserialize)]

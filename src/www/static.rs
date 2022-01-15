@@ -39,6 +39,17 @@ impl<'s> SessionContext<'s> {
 	}
 }
 
+#[derive(Serialize)]
+struct ProfileSessionContext<'s> {
+	inner: SessionContext<'s>,
+	name: &'s str,
+}
+impl<'s> ProfileSessionContext<'s> {
+	pub fn new(name: &'s str, inner: SessionContext<'s>) -> Self {
+		Self { inner, name }
+	}
+}
+
 #[get("/")]
 async fn index(session: Option<Session>) -> Template {
 	Template::render("index", SessionContext::new(false, session.as_ref()))
@@ -48,19 +59,21 @@ async fn index(session: Option<Session>) -> Template {
 async fn article(
 	session: Option<Session>,
 	file: &str,
-) -> Either<Either<Template, io::Result<NamedFile>>, Status> {
+) -> Result<Either<Template, io::Result<NamedFile>>, Status> {
 	// NOTE: Path traversal vulnerable
-	let path = format!("articles/{}", file);
-	let abspath = format!("./static/{}", path);
-	if Path::new(&(abspath.clone() + ".html.hbs")).exists() {
-		Either::Left(Either::Left(Template::render(
-			path,
-			SessionContext::new(false, session.as_ref()),
-		)))
-	} else if Path::new(&abspath).exists() {
-		Either::Left(Either::Right(NamedFile::open(abspath).await))
+	let template = format!("articles/{file}");
+	let abspath = format!("./static/{template}");
+	if Path::new(&abspath).exists() {
+		if let Some(template) = template.strip_suffix(".html.hbs") {
+			Ok(Either::Left(Template::render(
+				String::from(template),
+				SessionContext::new(false, session.as_ref()),
+			)))
+		} else {
+			Ok(Either::Right(NamedFile::open(abspath).await))
+		}
 	} else {
-		Either::Right(Status::NotFound)
+		Err(Status::NotFound)
 	}
 }
 
@@ -75,7 +88,10 @@ async fn sign(session: Option<Session>) -> Either<io::Result<NamedFile>, Redirec
 
 #[get("/profile")]
 async fn profile(session: Session) -> Template {
-	Template::render("profile", SessionContext::new(true, Some(&session)))
+	Template::render(
+		"profile",
+		ProfileSessionContext::new(&session.username, SessionContext::new(true, Some(&session))),
+	)
 }
 
 #[get("/signout")]
@@ -93,6 +109,16 @@ async fn signout(
 	Redirect::to("/sign")
 }
 
+#[get("/index.css")]
+async fn index_css() -> io::Result<NamedFile> {
+	NamedFile::open("static/index.css").await
+}
+
+#[get("/sign.css")]
+async fn sign_css() -> io::Result<NamedFile> {
+	NamedFile::open("static/sign.css").await
+}
+
 pub(crate) fn routes() -> Vec<Route> {
-	routes![index, article, sign, profile, signout]
+	routes![index, article, sign, profile, signout, index_css, sign_css]
 }
